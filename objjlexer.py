@@ -22,15 +22,7 @@ class ObjJLexer(object):
         self.lexer = l
 
     def test(self, data):
-        import logging
-        logging.basicConfig(
-            level = logging.DEBUG,
-            filename = "parselog.txt",
-            filemode = "w",
-            format = "%(filename)10s:%(lineno)4d:%(message)s"
-        )
-        log = logging.getLogger()
-        return self.parser.parse(data, debug=log)
+        return self.parser.parse(data)
 
     tokens = objjtokenizer.ObjJTokenizer.tokens
     
