@@ -9,8 +9,9 @@ class ObjJLexer(object):
     
     def print_class(self, c):
         print "Class %s : %s" % (c['name'], c['super'])
-        for s in c['methods']:
-            print "  %s(%s)%s" % (s['type'], s['returns'], s['selector'])
+        for sl in c['methods']:
+            s = c['methods'][sl]
+            print "  %s(%s)%s" % (s['type'], s['returns'], sl)
             if len(s['args']) > 0:
                 print "    %s" % ', '.join("(%s)%s" % a for a in s['args'])
     
@@ -57,7 +58,7 @@ class ObjJLexer(object):
         if   len(p) == 5:
             p[0] = (p[2], p[4])
         elif len(p) == 6:
-            p[0] = ('%s(%s)' % (p[2], p[4]), None)
+            p[0] = ((p[2], p[4]), None)
         else:
             p[0] = (p[2], None)
     
@@ -65,19 +66,18 @@ class ObjJLexer(object):
         '''class_methods : class_method
                          | class_methods class_method'''
         if len(p) == 2:
-            p[0] = [p[1],]
+            p[0] = {p[1][0]:p[1][1]}
         else:
-            p[1].append(p[2])
+            p[1][p[2][0]] = p[2][1]
             p[0] = p[1]
     
     def p_class_method(self, p):
         'class_method : METHOD_TYPE BRACE_OPEN IDENTIFIER BRACE_CLOSE method'
-        p[0] = {
+        p[0] = (p[5]['selector'], {
             'type': p[1],
             'returns': p[3],
-            'selector': p[5]['selector'],
             'args': p[5]['args'],
-        }
+        })
     
     def p_method(self, p):
         '''method : method_args VARGS
