@@ -1,2 +1,5 @@
 *.pyc
 Foundation
+parselog.txt
+parser.out
+parsetab.py

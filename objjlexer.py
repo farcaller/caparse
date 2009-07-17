@@ -9,8 +9,10 @@ class ObjJLexer(object):
     
     def print_class(self, c):
         print "Class %s : %s" % (c['name'], c['super'])
-        for s in c['selectors']:
-            print "  %s(%s)%s" % (s['type'], s['returns'], s['name'])
+        for s in c['methods']:
+            print "  %s(%s)%s" % (s['type'], s['returns'], s['selector'])
+            if len(s['args']) > 0:
+                print "    %s" % ', '.join("(%s)%s" % a for a in s['args'])
     
     def build(self, **kwargs):
         self.parser = yacc.yacc(module=self, **kwargs)
@@ -40,16 +42,12 @@ class ObjJLexer(object):
         self.classes.append({
             'name': p[1][0],
             'super': p[1][1],
-            'selectors': p[2],
+            'methods': p[2],
         })
     
     def p_class_error(self, p):
          'class : class_header class_methods KWEND error'
-         self.classes.append({
-             'name': p[1][0],
-             'super': p[1][1],
-             'selectors': p[2],
-         })
+         self.p_class(p)
          print "Garbage after class definition:", p[4]
     
     def p_class_header(self, p):
@@ -73,37 +71,45 @@ class ObjJLexer(object):
             p[0] = p[1]
     
     def p_class_method(self, p):
-        'class_method : METHOD_TYPE BRACE_OPEN IDENTIFIER BRACE_CLOSE selector'
+        'class_method : METHOD_TYPE BRACE_OPEN IDENTIFIER BRACE_CLOSE method'
         p[0] = {
             'type': p[1],
             'returns': p[3],
-            'name': p[5],
+            'selector': p[5]['selector'],
+            'args': p[5]['args'],
         }
     
-    def p_selector(self, p):
-        '''selector : selector_args VARGS
-                    | selector_args
-                    | selector_noargs'''
+    def p_method(self, p):
+        '''method : method_args VARGS
+                  | method_args
+                  | method_noargs'''
         if len(p) == 3:
-            p[0] = p[1] + ',...'
-        else:
-            p[0] = p[1]
-    
-    def p_selector_noargs(self, p):
-        'selector_noargs : IDENTIFIER'
+            p[1]['args'].append(('...',None))
         p[0] = p[1]
     
-    def p_selector_args(self, p):
-        '''selector_args : selector_part
-                         | selector_args selector_part'''
-        if(len(p) == 2):
-            p[0] = p[1]
-        else:
-            p[0] = p[1] + ' ' + p[2]
+    def p_method_noargs(self, p):
+        'method_noargs : IDENTIFIER'
+        p[0] = {
+            'selector': p[1],
+            'args': [],
+        }
     
-    def p_selector_part(self, p):
-        'selector_part : SELIDENTIFIER BRACE_OPEN IDENTIFIER BRACE_CLOSE IDENTIFIER'
-        p[0] = '%s:(%s)%s' % (p[1], p[3], p[5])
+    def p_method_args(self, p):
+        '''method_args : method_part
+                       | method_args method_part'''
+        if(len(p) == 2):
+            p[0] = {
+                'selector': p[1][0],
+                'args': [ (p[1][1], p[1][2]) ],
+            }
+        else:
+            p[1]['selector'] += p[2][0]
+            p[1]['args'].append((p[2][1], p[2][2]))
+            p[0] = p[1]
+    
+    def p_method_part(self, p):
+        'method_part : SELIDENTIFIER BRACE_OPEN IDENTIFIER BRACE_CLOSE IDENTIFIER'
+        p[0] = (p[1], p[3], p[5])
     
     def p_error(self, p):
         print "Syntax error in input:",p
